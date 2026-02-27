@@ -6,5 +6,5 @@ compatibility_date = "2025-01-01"
 ADMIN_TOKEN = "ganti-dengan-token-admin-yang-kuat"
 
 [[r2_buckets]]
-binding = "DATA_R2"
-bucket_name = "api-relay-token-store"
+binding = "vpsai"
+bucket_name = "vpsai"

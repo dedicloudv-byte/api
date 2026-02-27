@@ -34,8 +34,8 @@ function normalizeTarget(url) {
 }
 
 async function saveRoute(env, route) {
-  if (env.DATA_R2) {
-    await env.DATA_R2.put(`routes/${route.id}.json`, JSON.stringify(route), {
+  if (env.vpsai) {
+    await env.vpsai.put(`routes/${route.id}.json`, JSON.stringify(route), {
       httpMetadata: { contentType: "application/json" }
     });
     return;
@@ -44,8 +44,8 @@ async function saveRoute(env, route) {
 }
 
 async function getRoute(env, id) {
-  if (env.DATA_R2) {
-    const object = await env.DATA_R2.get(`routes/${id}.json`);
+  if (env.vpsai) {
+    const object = await env.vpsai.get(`routes/${id}.json`);
     if (!object) return null;
     const raw = await object.text();
     return raw ? JSON.parse(raw) : null;
@@ -54,11 +54,11 @@ async function getRoute(env, id) {
 }
 
 async function listRoutes(env) {
-  if (env.DATA_R2) {
-    const listed = await env.DATA_R2.list({ prefix: "routes/" });
+  if (env.vpsai) {
+    const listed = await env.vpsai.list({ prefix: "routes/" });
     const routes = await Promise.all(
       listed.objects.map(async (obj) => {
-        const item = await env.DATA_R2.get(obj.key);
+        const item = await env.vpsai.get(obj.key);
         if (!item) return null;
         const raw = await item.text();
         return raw ? JSON.parse(raw) : null;
@@ -70,8 +70,8 @@ async function listRoutes(env) {
 }
 
 async function deleteRoute(env, id) {
-  if (env.DATA_R2) {
-    await env.DATA_R2.delete(`routes/${id}.json`);
+  if (env.vpsai) {
+    await env.vpsai.delete(`routes/${id}.json`);
     return;
   }
   memStore.routes.delete(id);
@@ -79,8 +79,8 @@ async function deleteRoute(env, id) {
 
 async function saveUserToken(env, routeId, token) {
   const payload = JSON.stringify({ token, updatedAt: nowIso() });
-  if (env.DATA_R2) {
-    await env.DATA_R2.put(`token/${routeId}.json`, payload, {
+  if (env.vpsai) {
+    await env.vpsai.put(`token/${routeId}.json`, payload, {
       httpMetadata: { contentType: "application/json" }
     });
     return;
@@ -89,8 +89,8 @@ async function saveUserToken(env, routeId, token) {
 }
 
 async function getUserToken(env, routeId) {
-  if (env.DATA_R2) {
-    const object = await env.DATA_R2.get(`token/${routeId}.json`);
+  if (env.vpsai) {
+    const object = await env.vpsai.get(`token/${routeId}.json`);
     if (!object) return null;
     const raw = await object.text();
     return raw ? JSON.parse(raw).token : null;
@@ -100,17 +100,17 @@ async function getUserToken(env, routeId) {
 }
 
 async function deleteUserToken(env, routeId) {
-  if (env.DATA_R2) {
-    await env.DATA_R2.delete(`token/${routeId}.json`);
+  if (env.vpsai) {
+    await env.vpsai.delete(`token/${routeId}.json`);
     return;
   }
   memStore.tokens.delete(routeId);
 }
 
 async function addLog(env, log) {
-  if (env.DATA_R2) {
+  if (env.vpsai) {
     const key = `logs/${Date.now()}_${crypto.randomUUID().slice(0, 8)}.json`;
-    await env.DATA_R2.put(key, JSON.stringify(log), {
+    await env.vpsai.put(key, JSON.stringify(log), {
       httpMetadata: { contentType: "application/json" }
     });
     return;
@@ -121,11 +121,11 @@ async function addLog(env, log) {
 
 async function listLogs(env, limit = 50) {
   const safeLimit = Math.max(1, Math.min(Number(limit) || 50, 200));
-  if (env.DATA_R2) {
-    const listed = await env.DATA_R2.list({ prefix: "logs/", limit: safeLimit });
+  if (env.vpsai) {
+    const listed = await env.vpsai.list({ prefix: "logs/", limit: safeLimit });
     const logs = await Promise.all(
       listed.objects.map(async (obj) => {
-        const item = await env.DATA_R2.get(obj.key);
+        const item = await env.vpsai.get(obj.key);
         if (!item) return null;
         const raw = await item.text();
         return raw ? JSON.parse(raw) : null;
