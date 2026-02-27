@@ -5,14 +5,6 @@ compatibility_date = "2025-01-01"
 [vars]
 ADMIN_TOKEN = "ganti-dengan-token-admin-yang-kuat"
 
-[[kv_namespaces]]
-binding = "CONFIG_KV"
-id = "REPLACE_WITH_CONFIG_KV_ID"
-
-[[kv_namespaces]]
-binding = "LOG_KV"
-id = "REPLACE_WITH_LOG_KV_ID"
-
 [[r2_buckets]]
-binding = "TOKEN_R2"
+binding = "DATA_R2"
 bucket_name = "api-relay-token-store"

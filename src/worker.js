@@ -20,7 +20,6 @@ const generateUserToken = () => {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 };
 
-const tokenKey = (routeId) => `token/${routeId}.json`;
 
 function normalizeTarget(url) {
   try {
@@ -35,27 +34,33 @@ function normalizeTarget(url) {
 }
 
 async function saveRoute(env, route) {
-  if (env.CONFIG_KV) {
-    await env.CONFIG_KV.put(`route:${route.id}`, JSON.stringify(route));
+  if (env.DATA_R2) {
+    await env.DATA_R2.put(`routes/${route.id}.json`, JSON.stringify(route), {
+      httpMetadata: { contentType: "application/json" }
+    });
     return;
   }
   memStore.routes.set(route.id, route);
 }
 
 async function getRoute(env, id) {
-  if (env.CONFIG_KV) {
-    const raw = await env.CONFIG_KV.get(`route:${id}`);
+  if (env.DATA_R2) {
+    const object = await env.DATA_R2.get(`routes/${id}.json`);
+    if (!object) return null;
+    const raw = await object.text();
     return raw ? JSON.parse(raw) : null;
   }
   return memStore.routes.get(id) || null;
 }
 
 async function listRoutes(env) {
-  if (env.CONFIG_KV) {
-    const listed = await env.CONFIG_KV.list({ prefix: "route:" });
+  if (env.DATA_R2) {
+    const listed = await env.DATA_R2.list({ prefix: "routes/" });
     const routes = await Promise.all(
-      listed.keys.map(async (k) => {
-        const raw = await env.CONFIG_KV.get(k.name);
+      listed.objects.map(async (obj) => {
+        const item = await env.DATA_R2.get(obj.key);
+        if (!item) return null;
+        const raw = await item.text();
         return raw ? JSON.parse(raw) : null;
       })
     );
@@ -65,8 +70,8 @@ async function listRoutes(env) {
 }
 
 async function deleteRoute(env, id) {
-  if (env.CONFIG_KV) {
-    await env.CONFIG_KV.delete(`route:${id}`);
+  if (env.DATA_R2) {
+    await env.DATA_R2.delete(`routes/${id}.json`);
     return;
   }
   memStore.routes.delete(id);
@@ -74,8 +79,8 @@ async function deleteRoute(env, id) {
 
 async function saveUserToken(env, routeId, token) {
   const payload = JSON.stringify({ token, updatedAt: nowIso() });
-  if (env.TOKEN_R2) {
-    await env.TOKEN_R2.put(tokenKey(routeId), payload, {
+  if (env.DATA_R2) {
+    await env.DATA_R2.put(`token/${routeId}.json`, payload, {
       httpMetadata: { contentType: "application/json" }
     });
     return;
@@ -84,8 +89,8 @@ async function saveUserToken(env, routeId, token) {
 }
 
 async function getUserToken(env, routeId) {
-  if (env.TOKEN_R2) {
-    const object = await env.TOKEN_R2.get(tokenKey(routeId));
+  if (env.DATA_R2) {
+    const object = await env.DATA_R2.get(`token/${routeId}.json`);
     if (!object) return null;
     const raw = await object.text();
     return raw ? JSON.parse(raw).token : null;
@@ -95,17 +100,19 @@ async function getUserToken(env, routeId) {
 }
 
 async function deleteUserToken(env, routeId) {
-  if (env.TOKEN_R2) {
-    await env.TOKEN_R2.delete(tokenKey(routeId));
+  if (env.DATA_R2) {
+    await env.DATA_R2.delete(`token/${routeId}.json`);
     return;
   }
   memStore.tokens.delete(routeId);
 }
 
 async function addLog(env, log) {
-  if (env.LOG_KV) {
-    const key = `log:${Date.now()}:${crypto.randomUUID().slice(0, 8)}`;
-    await env.LOG_KV.put(key, JSON.stringify(log));
+  if (env.DATA_R2) {
+    const key = `logs/${Date.now()}_${crypto.randomUUID().slice(0, 8)}.json`;
+    await env.DATA_R2.put(key, JSON.stringify(log), {
+      httpMetadata: { contentType: "application/json" }
+    });
     return;
   }
   memStore.logs.unshift(log);
@@ -114,11 +121,13 @@ async function addLog(env, log) {
 
 async function listLogs(env, limit = 50) {
   const safeLimit = Math.max(1, Math.min(Number(limit) || 50, 200));
-  if (env.LOG_KV) {
-    const listed = await env.LOG_KV.list({ prefix: "log:", limit: safeLimit });
+  if (env.DATA_R2) {
+    const listed = await env.DATA_R2.list({ prefix: "logs/", limit: safeLimit });
     const logs = await Promise.all(
-      listed.keys.map(async (k) => {
-        const raw = await env.LOG_KV.get(k.name);
+      listed.objects.map(async (obj) => {
+        const item = await env.DATA_R2.get(obj.key);
+        if (!item) return null;
+        const raw = await item.text();
         return raw ? JSON.parse(raw) : null;
       })
     );
