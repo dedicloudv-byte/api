@@ -1,0 +1,10 @@
+name = "api-relay-worker"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+ADMIN_TOKEN = "ganti-dengan-token-admin-yang-kuat"
+
+[[r2_buckets]]
+binding = "STORAGE_R2"
+bucket_name = "api-relay-storage"
