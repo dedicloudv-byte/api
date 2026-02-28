@@ -134,6 +134,14 @@ async function saveUser(env, user) {
   memStore.users.set(user.username, user);
 }
 
+async function deleteUser(env, username) {
+  if (env.vpsai) {
+    await env.vpsai.delete(`users/${username}.json`);
+    return;
+  }
+  memStore.users.delete(username);
+}
+
 async function getUser(env, username) {
   if (env.vpsai) {
     const object = await env.vpsai.get(`users/${username}.json`);
@@ -407,14 +415,14 @@ const appHtml = `<!doctype html>
     }
     .hidden { display: none !important; }
     .pre { white-space: pre-wrap; font-family: monospace; background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #1e293b; margin: 1rem 0; }
-    .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
-    header { background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    .card { background: var(--card); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+    header { background: rgba(15,23,42,0.6); backdrop-filter: blur(10px); padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap; gap: 1rem; }
+    .card { background: var(--card); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 16px; padding: 1.25rem; margin-bottom: 1.25rem; overflow-x: auto; }
     input, textarea, button { width: 100%; padding: 0.8rem; border-radius: 10px; margin: 0.5rem 0; font-size: 0.95rem; }
     input, textarea { background: rgba(15,23,42,0.8); color: white; border: 1px solid rgba(96, 165, 250, 0.2); }
     button { background: linear-gradient(90deg, var(--accent), var(--accent-2)); color: #0b1020; border: none; font-weight: bold; cursor: pointer; }
     nav button { width: auto; display: inline-block; margin-left: 0.5rem; }
-    table { width: 100%; border-collapse: collapse; }
+    table { width: 100%; border-collapse: collapse; min-width: 500px; }
     th, td { text-align: left; padding: 1rem; border-bottom: 1px solid rgba(148, 163, 184, 0.1); }
     .tag { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
     .tag-pending { background: #b4530933; color: #fbbf24; }
@@ -422,7 +430,14 @@ const appHtml = `<!doctype html>
     .tag-rejected { background: #991b1b33; color: #f87171; }
     .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: #0f172a; padding: 2rem; border-radius: 20px; width: 90%; max-width: 700px; border: 1px solid var(--accent); }
-    .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    @media (max-width: 600px) {
+      .container { padding: 1rem; }
+      header { justify-content: center; text-align: center; }
+      nav button { margin: 0.25rem; font-size: 0.8rem; }
+      h2 { font-size: 1.2rem; }
+      .card { padding: 1rem; }
+    }
   </style>
 </head>
 <body>
@@ -614,11 +629,12 @@ const appHtml = `<!doctype html>
 
         $('users-body').innerHTML = uRes.items.map(u => {
           const status = u.status || 'UNKNOWN';
-          return '<tr><td>' + esc(u.username) + '</td><td><span class="tag tag-' + status.toLowerCase() + '">' + esc(status) + '</span></td><td>' +
-            (status === 'PENDING' ?
-              '<button onclick="approve(\\'' + u.username + '\\')" style="width:auto; padding:0.4rem 1rem;">Setujui</button> <button onclick="reject(\\'' + u.username + '\\')" style="width:auto; padding:0.4rem 1rem; background:#ef4444;">Tolak</button>' :
-              '-') +
-            '</td></tr>';
+          let actions = '<button onclick="delUser(\\'' + u.username + '\\')" style="width:auto; padding:0.4rem 1rem; background:#ef4444;">Hapus</button>';
+          if (status === 'PENDING') {
+            actions = '<button onclick="approve(\\'' + u.username + '\\')" style="width:auto; padding:0.4rem 1rem;">Setujui</button> ' +
+                      '<button onclick="reject(\\'' + u.username + '\\')" style="width:auto; padding:0.4rem 1rem; background:#f59e0b;">Tolak</button> ' + actions;
+          }
+          return '<tr><td>' + esc(u.username) + '</td><td><span class="tag tag-' + status.toLowerCase() + '">' + esc(status) + '</span></td><td>' + actions + '</td></tr>';
         }).join('') || '<tr><td colspan="3" style="text-align:center;">Belum ada pendaftaran user.</td></tr>';
 
         let oldSec = $('usage-section');
@@ -647,6 +663,12 @@ const appHtml = `<!doctype html>
     async function reject(username) {
       if(!confirm('Tolak user ' + username + '?')) return;
       await api('/api/admin/users/' + username, { method: 'PATCH', body: JSON.stringify({ status: 'REJECTED' }) });
+      loadAdmin();
+    }
+
+    async function delUser(username) {
+      if(!confirm('Hapus permanen user ' + username + '?')) return;
+      await api('/api/admin/users/' + username, { method: 'DELETE' });
       loadAdmin();
     }
 
@@ -746,6 +768,12 @@ export default {
           if (body.status) user.status = body.status;
           await saveUser(env, user);
           return withCors(json({ ok: true, user }));
+        }
+
+        if (request.method === "DELETE" && url.pathname.startsWith("/api/admin/users/")) {
+          const username = url.pathname.split("/").pop();
+          await deleteUser(env, username);
+          return withCors(json({ ok: true }));
         }
 
         if (request.method === "POST" && url.pathname === "/api/admin/services") {
