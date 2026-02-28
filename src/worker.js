@@ -419,6 +419,7 @@ const appHtml = `<!doctype html>
     .tag { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
     .tag-pending { background: #b4530933; color: #fbbf24; }
     .tag-approved { background: #065f4633; color: #34d399; }
+    .tag-rejected { background: #991b1b33; color: #f87171; }
     .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: #0f172a; padding: 2rem; border-radius: 20px; width: 90%; max-width: 700px; border: 1px solid var(--accent); }
     .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
@@ -509,6 +510,7 @@ const appHtml = `<!doctype html>
 
   <script>
     const $ = id => document.getElementById(id);
+    const esc = str => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     let state = { token: localStorage.getItem('tok'), adminToken: sessionStorage.getItem('atok'), curSvc: null };
 
     async function api(path, opts = {}) {
@@ -576,13 +578,13 @@ const appHtml = `<!doctype html>
         const [svcs, keys] = await Promise.all([api('/api/user/services'), api('/api/user/keys')]);
         $('svc-list').innerHTML = svcs.items.map(s =>
           '<div class="card">' +
-            '<h4>' + s.name + '</h4>' +
-            '<p class="small">Usage: ' + s.userUsage + ' / ' + (s.limit || '∞') + '</p>' +
+            '<h4>' + esc(s.name) + '</h4>' +
+            '<p class="small">Usage: ' + esc(s.userUsage) + ' / ' + esc(s.limit || '∞') + '</p>' +
             '<button onclick="openDocs(\\'' + s.id + '\\')">Lihat Dokumentasi</button>' +
           '</div>'
         ).join('') || '<p>Belum ada API yang tersedia.</p>';
         $('keys-body').innerHTML = keys.items.map(k =>
-          '<tr><td>' + k.name + '</td><td>' + k.serviceId + '</td><td><code>' + k.key + '</code></td></tr>'
+          '<tr><td>' + esc(k.name) + '</td><td>' + esc(k.serviceId) + '</td><td><code>' + esc(k.key) + '</code></td></tr>'
         ).join('') || '<tr><td colspan="3">Anda belum memiliki API Key.</td></tr>';
       } catch (e) { console.error(e); }
     }
@@ -592,8 +594,8 @@ const appHtml = `<!doctype html>
       const s = svcs.items.find(x => x.id === id);
       state.curSvc = s;
       $('m-title').innerText = 'Dokumentasi: ' + s.name;
-      $('m-body').innerHTML = '<div class="pre"><strong>Proxy Endpoint:</strong> ' + location.origin + '/u/' + s.id + '</div>' +
-                              '<div class="pre">' + (s.documentation || 'Tidak ada petunjuk tambahan.') + '</div>';
+      $('m-body').innerHTML = '<div class="pre"><strong>Proxy Endpoint:</strong> ' + esc(location.origin + '/u/' + s.id) + '</div>' +
+                              '<div class="pre">' + esc(s.documentation || 'Tidak ada petunjuk tambahan.') + '</div>';
       $('modal').classList.remove('hidden');
     }
 
@@ -610,13 +612,14 @@ const appHtml = `<!doctype html>
       try {
         const [uRes, sRes] = await Promise.all([api('/api/admin/users'), api('/api/admin/services')]);
 
-        $('users-body').innerHTML = uRes.items.map(u =>
-          '<tr><td>' + u.username + '</td><td><span class="tag tag-' + u.status.toLowerCase() + '">' + u.status + '</span></td><td>' +
-          (u.status === 'PENDING' ?
-            '<button onclick="approve(\\'' + u.username + '\\')" style="width:auto; padding:0.4rem 1rem;">Setujui</button> <button onclick="reject(\\'' + u.username + '\\')" style="width:auto; padding:0.4rem 1rem; background:#ef4444;">Tolak</button>' :
-            '-') +
-          '</td></tr>'
-        ).join('') || '<tr><td colspan="3" style="text-align:center;">Belum ada pendaftaran user.</td></tr>';
+        $('users-body').innerHTML = uRes.items.map(u => {
+          const status = u.status || 'UNKNOWN';
+          return '<tr><td>' + esc(u.username) + '</td><td><span class="tag tag-' + status.toLowerCase() + '">' + esc(status) + '</span></td><td>' +
+            (status === 'PENDING' ?
+              '<button onclick="approve(\\'' + u.username + '\\')" style="width:auto; padding:0.4rem 1rem;">Setujui</button> <button onclick="reject(\\'' + u.username + '\\')" style="width:auto; padding:0.4rem 1rem; background:#ef4444;">Tolak</button>' :
+              '-') +
+            '</td></tr>';
+        }).join('') || '<tr><td colspan="3" style="text-align:center;">Belum ada pendaftaran user.</td></tr>';
 
         let oldSec = $('usage-section');
         if(!oldSec) {
@@ -626,9 +629,9 @@ const appHtml = `<!doctype html>
 
         $('usage-content').innerHTML = sRes.items.map(s => {
           const uList = s.usages && s.usages.length ?
-            '<ul>' + s.usages.map(u => '<li>' + u.username + ': <strong>' + u.count + '</strong> / ' + (s.limit || '∞') + '</li>').join('') + '</ul>' :
+            '<ul>' + s.usages.map(u => '<li>' + esc(u.username) + ': <strong>' + esc(u.count) + '</strong> / ' + esc(s.limit || '∞') + '</li>').join('') + '</ul>' :
             '<p class="small">Belum ada penggunaan.</p>';
-          return '<div style="border-bottom:1px solid #334155; padding:0.5rem 0;"><strong>' + s.name + '</strong>' + uList + '</div>';
+          return '<div style="border-bottom:1px solid #334155; padding:0.5rem 0;"><strong>' + esc(s.name) + '</strong>' + uList + '</div>';
         }).join('') || '<p>Belum ada service.</p>';
 
       } catch (e) { alert('Gagal memuat data admin: ' + e.message); }
