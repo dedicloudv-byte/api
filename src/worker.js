@@ -25,11 +25,17 @@ const generateUserToken = () => {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 };
 
-async function hashPassword(password) {
-  const msgUint8 = new TextEncoder().encode(password);
+async function hashPassword(password, salt) {
+  const salted = salt + password;
+  const msgUint8 = new TextEncoder().encode(salted);
   const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function generateSalt() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 function normalizeTarget(url) {
@@ -422,6 +428,7 @@ const appHtml = `<!doctype html>
   <header>
     <h2 style="margin:0; color:var(--accent);">🌌 Nexus API</h2>
     <nav id="mainNav" class="hidden">
+      <button onclick="refreshCurrentView()" style="background:#10b981;">Refresh Data</button>
       <button onclick="showView('user-dash')">User Dashboard</button>
       <button id="adminBtn" class="hidden" onclick="showView('admin-dash')">Admin Dashboard</button>
       <button onclick="logout()" style="background: #ef4444;">Logout</button>
@@ -515,10 +522,17 @@ const appHtml = `<!doctype html>
     }
 
     function showView(id) {
+      state.curView = id;
       document.querySelectorAll('.view, #auth-view').forEach(v => v.classList.add('hidden'));
       $(id).classList.remove('hidden');
       if (id === 'user-dash') loadUser();
       if (id === 'admin-dash') loadAdmin();
+    }
+
+    function refreshCurrentView() {
+      if (state.curView === 'user-dash') loadUser();
+      else if (state.curView === 'admin-dash') loadAdmin();
+      else alert('Halaman ini tidak mendukung refresh.');
     }
 
     function toggleAuth() {
@@ -602,22 +616,22 @@ const appHtml = `<!doctype html>
             '<button onclick="approve(\\'' + u.username + '\\')" style="width:auto; padding:0.4rem 1rem;">Setujui</button> <button onclick="reject(\\'' + u.username + '\\')" style="width:auto; padding:0.4rem 1rem; background:#ef4444;">Tolak</button>' :
             '-') +
           '</td></tr>'
-        ).join('');
+        ).join('') || '<tr><td colspan="3" style="text-align:center;">Belum ada pendaftaran user.</td></tr>';
 
         let oldSec = $('usage-section');
         if(!oldSec) {
-          $('admin-dash').insertAdjacentHTML('beforeend', '<div id="usage-section" class="card"><h4>Penggunaan API</h4><div id="usage-content"></div></div>');
+          $('admin-dash').insertAdjacentHTML('beforeend', '<div id="usage-section" class="card"><h4>Monitoring Penggunaan API</h4><div id="usage-content"></div></div>');
           oldSec = $('usage-section');
         }
 
         $('usage-content').innerHTML = sRes.items.map(s => {
           const uList = s.usages && s.usages.length ?
-            '<ul>' + s.usages.map(u => '<li>' + u.username + ': ' + u.count + ' / ' + (s.limit || '∞') + '</li>').join('') + '</ul>' :
+            '<ul>' + s.usages.map(u => '<li>' + u.username + ': <strong>' + u.count + '</strong> / ' + (s.limit || '∞') + '</li>').join('') + '</ul>' :
             '<p class="small">Belum ada penggunaan.</p>';
           return '<div style="border-bottom:1px solid #334155; padding:0.5rem 0;"><strong>' + s.name + '</strong>' + uList + '</div>';
         }).join('') || '<p>Belum ada service.</p>';
 
-      } catch (e) { console.error(e); }
+      } catch (e) { alert('Gagal memuat data admin: ' + e.message); }
     }
 
     async function approve(username) {
@@ -679,8 +693,9 @@ export default {
         const existing = await getUser(env, username);
         if (existing) return withCors(json({ error: "Username sudah digunakan" }, 400));
 
-        const hashedPassword = await hashPassword(password);
-        const user = { username, password: hashedPassword, status: "PENDING", createdAt: nowIso() };
+        const salt = generateSalt();
+        const hashedPassword = await hashPassword(password, salt);
+        const user = { username, password: hashedPassword, salt, status: "PENDING", createdAt: nowIso() };
         await saveUser(env, user);
         return withCors(json({ ok: true, message: "Pendaftaran berhasil, menunggu persetujuan admin" }, 201));
       }
@@ -689,9 +704,10 @@ export default {
         const body = await parseBody(request);
         const { username, password } = body;
         const user = await getUser(env, username);
+        if (!user) return withCors(json({ error: "Username atau password salah" }, 401));
 
-        const hashedPassword = await hashPassword(password);
-        if (!user || user.password !== hashedPassword) return withCors(json({ error: "Username atau password salah" }, 401));
+        const hashedPassword = await hashPassword(password, user.salt || "");
+        if (user.password !== hashedPassword) return withCors(json({ error: "Username atau password salah" }, 401));
         if (user.status !== "APPROVED") return withCors(json({ error: "Akun Anda belum disetujui Admin" }, 403));
         const token = crypto.randomUUID();
         const session = { token, username, expiresAt: Date.now() + 86400000 };
