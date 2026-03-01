@@ -1047,7 +1047,7 @@ const appHtml = `<!DOCTYPE html>
             if (typeof event !== 'undefined' && event?.currentTarget) {
                 target = event.currentTarget;
             } else {
-                target = document.querySelector(`.nav-item[onclick*="switchTab('${tab}')"]`);
+                target = document.querySelector('.nav-item[onclick*="switchTab(\'' + tab + '\')"]');
             }
 
             if (target) {
