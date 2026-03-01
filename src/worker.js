@@ -1042,12 +1042,30 @@ const appHtml = `<!DOCTYPE html>
                 el.classList.remove('bg-primary-500', 'bg-opacity-10', 'text-primary-400', 'border', 'border-primary-500', 'border-opacity-20');
                 el.classList.add('hover:bg-gray-800', 'text-gray-300');
             });
-            const evt = typeof event !== 'undefined' ? event : null;
-            evt?.currentTarget?.classList.add('bg-primary-500', 'bg-opacity-10', 'text-primary-400', 'border', 'border-primary-500', 'border-opacity-20');
+
+            let target = null;
+            if (typeof event !== 'undefined' && event?.currentTarget) {
+                target = event.currentTarget;
+            } else {
+                target = document.querySelector(`.nav-item[onclick*="switchTab('${tab}')"]`);
+            }
+
+            if (target) {
+                target.classList.add('bg-primary-500', 'bg-opacity-10', 'text-primary-400', 'border', 'border-primary-500', 'border-opacity-20');
+                target.classList.remove('hover:bg-gray-800', 'text-gray-300');
+            }
 
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            \$(tab + 'Tab').classList.remove('hidden');
-            state.currentTab = tab;
+            const tabEl = $(tab + 'Tab');
+            if (tabEl) {
+                tabEl.classList.remove('hidden');
+                state.currentTab = tab;
+                localStorage.setItem('activeTab', tab);
+            } else {
+                $('overviewTab').classList.remove('hidden');
+                state.currentTab = 'overview';
+                localStorage.setItem('activeTab', 'overview');
+            }
 
             const titles = {
                 overview: 'Overview',
@@ -1059,13 +1077,14 @@ const appHtml = `<!DOCTYPE html>
                 'admin-svcs': 'API Services',
                 'admin-logs': 'System Logs'
             };
-            \$('pageTitle').textContent = titles[tab] || 'Dashboard';
+            $('pageTitle').textContent = titles[state.currentTab] || 'Dashboard';
 
-            if (tab === 'services') loadServices();
-            if (tab === 'credentials') loadKeys();
-            if (tab === 'logs') loadLogs();
-            if (tab === 'usage') initUsageCharts();
-            if (tab.startsWith('admin')) loadAdminData(tab);
+            if (state.currentTab === 'overview') initDashboard();
+            if (state.currentTab === 'services') loadServices();
+            if (state.currentTab === 'credentials') loadKeys();
+            if (state.currentTab === 'logs') loadLogs();
+            if (state.currentTab === 'usage') initUsageCharts();
+            if (state.currentTab.startsWith('admin')) loadAdminData(state.currentTab);
         }
 
         async function initDashboard() {
@@ -1344,16 +1363,18 @@ const appHtml = `<!DOCTYPE html>
 
         function toggleTheme() { document.documentElement.classList.toggle('dark'); }
 
-        if (state.token) {
+        if (state.token || state.adminToken) {
+            const savedTab = localStorage.getItem('activeTab') || 'overview';
             \$('loginOverlay').classList.add('hidden');
             \$('mainApp').classList.remove('hidden');
-            initDashboard();
-        } else if (state.adminToken) {
-            \$('loginOverlay').classList.add('hidden');
-            \$('mainApp').classList.remove('hidden');
-            \$('admin-nav').classList.remove('hidden');
-            \$('user-role-display').innerText = 'Admin Panel';
-            switchTab('admin-users');
+
+            if (state.adminToken) {
+                $('admin-nav').classList.remove('hidden');
+                $('user-role-display').innerText = 'Admin Panel';
+                switchTab(savedTab.startsWith('admin-') ? savedTab : 'admin-users');
+            } else {
+                switchTab(savedTab.startsWith('admin-') ? 'overview' : savedTab);
+            }
         }
     </script>
 </body>
