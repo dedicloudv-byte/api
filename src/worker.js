@@ -1042,7 +1042,8 @@ const appHtml = `<!DOCTYPE html>
                 el.classList.remove('bg-primary-500', 'bg-opacity-10', 'text-primary-400', 'border', 'border-primary-500', 'border-opacity-20');
                 el.classList.add('hover:bg-gray-800', 'text-gray-300');
             });
-            event.currentTarget?.classList.add('bg-primary-500', 'bg-opacity-10', 'text-primary-400', 'border', 'border-primary-500', 'border-opacity-20');
+            const evt = typeof event !== 'undefined' ? event : null;
+            evt?.currentTarget?.classList.add('bg-primary-500', 'bg-opacity-10', 'text-primary-400', 'border', 'border-primary-500', 'border-opacity-20');
 
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             \$(tab + 'Tab').classList.remove('hidden');
@@ -1169,53 +1170,72 @@ const appHtml = `<!DOCTYPE html>
 
         async function loadAdminData(tab) {
             try {
+                console.log('Loading admin data for:', tab);
                 if (tab === 'admin-users') {
                     const res = await api('/api/admin/users');
+                    console.log('Admin users response:', res);
                     \$('admin-users-body').innerHTML = res.items.map(u => \`
-                        <tr>
-                            <td class="px-6 py-4">\${esc(u.username)}</td>
+                        <tr class="border-b border-gray-800 hover:bg-dark-800/30 transition-colors">
+                            <td class="px-6 py-4 font-medium">\${esc(u.username)}</td>
                             <td class="px-6 py-4"><span class="tag tag-\${u.status.toLowerCase()}">\${u.status}</span></td>
-                            <td class="px-6 py-4 flex gap-2">
-                                \${u.status === 'PENDING' ? \`
-                                    <button onclick="adminApprove('\${u.username}')" class="px-2 py-1 bg-green-600 text-[10px] rounded">Approve</button>
-                                    <button onclick="adminReject('\${u.username}')" class="px-2 py-1 bg-red-600 text-[10px] rounded">Reject</button>
-                                \` : \`<button onclick="adminDeleteUser('\${u.username}')" class="text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button>\`}
+                            <td class="px-6 py-4">
+                                <div class="flex gap-2">
+                                    \${u.status === 'PENDING' ? \`
+                                        <button onclick="adminApprove('\${u.username}')" class="px-3 py-1 bg-green-600 hover:bg-green-500 text-[10px] font-bold rounded transition-colors">APPROVE</button>
+                                        <button onclick="adminReject('\${u.username}')" class="px-3 py-1 bg-red-600 hover:bg-red-500 text-[10px] font-bold rounded transition-colors">REJECT</button>
+                                    \` : \`
+                                        <button onclick="adminDeleteUser('\${u.username}')" class="p-2 text-gray-400 hover:text-red-400 transition-colors" title="Delete User">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    \`}
+                                </div>
                             </td>
                         </tr>
-                    \`).join('');
+                    \`).join('') || '<tr><td colspan="3" class="px-6 py-8 text-center text-gray-500">No users found.</td></tr>';
                     lucide.createIcons();
                 } else if (tab === 'admin-svcs') {
                    const res = await api('/api/admin/services');
+                   console.log('Admin services response:', res);
                    \$('admin-svc-list').innerHTML = res.items.map(s => \`
-                        <div class="glass-effect p-4 rounded-xl border border-gray-800 flex justify-between items-center">
+                        <div class="glass-effect p-5 rounded-xl border border-gray-800 flex justify-between items-center hover:border-gray-700 transition-all">
                             <div>
-                                <h4 class="font-bold">\${esc(s.name)}</h4>
-                                <p class="text-xs text-gray-500 font-mono">\${s.id} -> \${esc(s.targetUrl)}</p>
+                                <h4 class="font-bold text-lg">\${esc(s.name)}</h4>
+                                <p class="text-xs text-gray-500 font-mono mt-1">\${s.id} &rarr; \${esc(s.targetUrl)}</p>
                             </div>
-                            <div class="text-right">
-                                <p class="text-xs font-bold text-primary-400">\${s.usages.reduce((a,b)=>a+b.count,0)} total hits</p>
-                                <button onclick="adminDeleteSvc('\${s.id}')" class="text-red-400 hover:text-red-300 mt-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            <div class="flex items-center gap-6">
+                                <div class="text-right">
+                                    <p class="text-xs font-bold text-primary-400 uppercase tracking-wider">\${s.usages.reduce((a,b)=>a+b.count,0)} hits</p>
+                                    <p class="text-[10px] text-gray-500 mt-1">\${s.limit > 0 ? 'Limit: '+s.limit : 'No Limit'}</p>
+                                </div>
+                                <button onclick="adminDeleteSvc('\${s.id}')" class="p-2 text-gray-400 hover:text-red-400 transition-colors">
+                                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                                </button>
                             </div>
                         </div>
-                   \`).join('');
+                   \`).join('') || '<div class="glass-effect p-8 rounded-xl border border-gray-800 text-center text-gray-500">No services configured.</div>';
                    lucide.createIcons();
                 } else if (tab === 'admin-logs') {
                     const res = await api('/api/admin/logs');
+                    console.log('Admin logs response:', res);
                     \$('admin-logs-body').innerHTML = res.items.map(l => \`
-                        <tr class="text-xs">
+                        <tr class="text-xs border-b border-gray-800 hover:bg-dark-800/30 transition-colors">
                             <td class="px-6 py-3 font-mono text-gray-500">\${new Date(l.timestamp).toLocaleString()}</td>
-                            <td class="px-6 py-3 text-gray-300">\${esc(l.username || '-')}</td>
-                            <td class="px-6 py-3 text-gray-400 truncate max-w-[200px]">\${esc(l.message || l.endpoint)}</td>
+                            <td class="px-6 py-3 text-gray-300 font-medium">\${esc(l.username || '-')}</td>
+                            <td class="px-6 py-3 text-gray-400 truncate max-w-[300px]">\${esc(l.message || l.endpoint)}\${l.routeId ? ' <span class="text-[10px] text-gray-600">('+l.routeId+')</span>' : ''}</td>
                             <td class="px-6 py-3"><span class="\${l.status<400?'text-green-400':'text-red-400'} font-bold">\${l.status}</span></td>
                         </tr>
-                    \`).join('');
+                    \`).join('') || '<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">No system logs available.</td></tr>';
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error('Error loading admin data:', e);
+                showToast('Failed to load admin data: ' + e.message);
+            }
         }
 
 
-        async function adminApprove(u) { await api('/api/admin/users/'+u, { method:'PATCH', body: JSON.stringify({status:'APPROVED'}) }); loadAdminData('admin-users'); }
-        async function adminDeleteUser(u) { if(confirm('Delete user '+u+'?')) { await api('/api/admin/users/'+u, { method:'DELETE'}); loadAdminData('admin-users'); } }
+        async function adminApprove(u) { try { await api('/api/admin/users/'+u, { method:'PATCH', body: JSON.stringify({status:'APPROVED'}) }); showToast('User approved'); loadAdminData('admin-users'); } catch(e) { showToast(e.message); } }
+        async function adminReject(u) { try { await api('/api/admin/users/'+u, { method:'PATCH', body: JSON.stringify({status:'REJECTED'}) }); showToast('User rejected'); loadAdminData('admin-users'); } catch(e) { showToast(e.message); } }
+        async function adminDeleteUser(u) { if(confirm('Delete user '+u+'?')) { try { await api('/api/admin/users/'+u, { method:'DELETE'}); showToast('User deleted'); loadAdminData('admin-users'); } catch(e) { showToast(e.message); } } }
         async function adminDeleteSvc(id) { if(confirm('Delete service '+id+'?')) { await api('/api/admin/services/'+id, { method:'DELETE'}); loadAdminData('admin-svcs'); } }
         async function clearAllLogs() { if(confirm('Clear all logs?')) { await api('/api/admin/logs', { method:'DELETE'}); loadAdminData('admin-logs'); } }
 
@@ -1363,6 +1383,7 @@ export default {
         const salt = generateSalt();
         const hashedPassword = await hashPassword(password, salt);
         const user = { username, password: hashedPassword, salt, status: "PENDING", createdAt: nowIso() };
+        console.log('Registering user:', username);
         await saveUser(env, user);
         return withCors(json({ ok: true, message: "Pendaftaran berhasil, menunggu persetujuan admin" }, 201));
       }
@@ -1399,6 +1420,7 @@ export default {
 
         if (request.method === "GET" && url.pathname === "/api/admin/users") {
           const items = await listUsers(env);
+          console.log('Admin listing users, count:', items.length);
           return withCors(json({ ok: true, items }));
         }
 
