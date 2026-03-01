@@ -1,43 +1,36 @@
-const memStore = {
-  routes: new Map(),
+var __defProp = Object.defineProperty;
+var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
+
+// src/worker.js
+var memStore = {
+  routes: /* @__PURE__ */ new Map(),
   logs: [],
-  tokens: new Map(),
-  users: new Map(),
-  services: new Map(),
-  apikeys: new Map(),
-  sessions: new Map(),
-  usage: new Map()
+  tokens: /* @__PURE__ */ new Map(),
+  users: /* @__PURE__ */ new Map(),
+  services: /* @__PURE__ */ new Map(),
+  apikeys: /* @__PURE__ */ new Map(),
+  sessions: /* @__PURE__ */ new Map(),
+  usage: /* @__PURE__ */ new Map()
 };
-
-const json = (data, status = 200) =>
-  new Response(JSON.stringify(data, null, 2), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8" }
-  });
-
-const nowIso = () => new Date().toISOString();
-
-const generateId = (prefix = "r") =>
-  `${prefix}_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
-
-const generateUserToken = () => {
-  const bytes = crypto.getRandomValues(new Uint8Array(24));
-  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-};
-
+var json = /* @__PURE__ */ __name((data, status = 200) => new Response(JSON.stringify(data, null, 2), {
+  status,
+  headers: { "content-type": "application/json; charset=utf-8" }
+}), "json");
+var nowIso = /* @__PURE__ */ __name(() => (/* @__PURE__ */ new Date()).toISOString(), "nowIso");
+var generateId = /* @__PURE__ */ __name((prefix = "r") => `${prefix}_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`, "generateId");
 async function hashPassword(password, salt) {
   const salted = salt + password;
   const msgUint8 = new TextEncoder().encode(salted);
   const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-
+__name(hashPassword, "hashPassword");
 function generateSalt() {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-
+__name(generateSalt, "generateSalt");
 function normalizeTarget(url) {
   try {
     const parsed = new URL(url);
@@ -49,81 +42,7 @@ function normalizeTarget(url) {
     throw new Error("targetUrl tidak valid");
   }
 }
-
-async function saveRoute(env, route) {
-  if (env.vpsai) {
-    await env.vpsai.put(`routes/${route.id}.json`, JSON.stringify(route), {
-      httpMetadata: { contentType: "application/json" }
-    });
-    return;
-  }
-  memStore.routes.set(route.id, route);
-}
-
-async function getRoute(env, id) {
-  if (env.vpsai) {
-    const object = await env.vpsai.get(`routes/${id}.json`);
-    if (!object) return null;
-    const raw = await object.text();
-    return raw ? JSON.parse(raw) : null;
-  }
-  return memStore.routes.get(id) || null;
-}
-
-async function listRoutes(env) {
-  if (env.vpsai) {
-    const listed = await env.vpsai.list({ prefix: "routes/" });
-    const routes = await Promise.all(
-      listed.objects.map(async (obj) => {
-        const item = await env.vpsai.get(obj.key);
-        if (!item) return null;
-        const raw = await item.text();
-        return raw ? JSON.parse(raw) : null;
-      })
-    );
-    return routes.filter(Boolean).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  }
-  return Array.from(memStore.routes.values()).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-}
-
-async function deleteRoute(env, id) {
-  if (env.vpsai) {
-    await env.vpsai.delete(`routes/${id}.json`);
-    return;
-  }
-  memStore.routes.delete(id);
-}
-
-async function saveUserToken(env, routeId, token) {
-  const payload = JSON.stringify({ token, updatedAt: nowIso() });
-  if (env.vpsai) {
-    await env.vpsai.put(`token/${routeId}.json`, payload, {
-      httpMetadata: { contentType: "application/json" }
-    });
-    return;
-  }
-  memStore.tokens.set(routeId, payload);
-}
-
-async function getUserToken(env, routeId) {
-  if (env.vpsai) {
-    const object = await env.vpsai.get(`token/${routeId}.json`);
-    if (!object) return null;
-    const raw = await object.text();
-    return raw ? JSON.parse(raw).token : null;
-  }
-  const raw = memStore.tokens.get(routeId);
-  return raw ? JSON.parse(raw).token : null;
-}
-
-async function deleteUserToken(env, routeId) {
-  if (env.vpsai) {
-    await env.vpsai.delete(`token/${routeId}.json`);
-    return;
-  }
-  memStore.tokens.delete(routeId);
-}
-
+__name(normalizeTarget, "normalizeTarget");
 async function saveUser(env, user) {
   if (env.vpsai) {
     await env.vpsai.put(`users/${user.username}.json`, JSON.stringify(user), {
@@ -133,7 +52,7 @@ async function saveUser(env, user) {
   }
   memStore.users.set(user.username, user);
 }
-
+__name(saveUser, "saveUser");
 async function deleteUser(env, username) {
   if (env.vpsai) {
     await env.vpsai.delete(`users/${username}.json`);
@@ -141,7 +60,7 @@ async function deleteUser(env, username) {
   }
   memStore.users.delete(username);
 }
-
+__name(deleteUser, "deleteUser");
 async function getUser(env, username) {
   if (env.vpsai) {
     const object = await env.vpsai.get(`users/${username}.json`);
@@ -151,7 +70,7 @@ async function getUser(env, username) {
   }
   return memStore.users.get(username) || null;
 }
-
+__name(getUser, "getUser");
 async function listUsers(env) {
   if (env.vpsai) {
     const listed = await env.vpsai.list({ prefix: "users/" });
@@ -163,11 +82,11 @@ async function listUsers(env) {
         return raw ? JSON.parse(raw) : null;
       })
     );
-    return users.filter(Boolean).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    return users.filter(Boolean).sort((a, b) => a.createdAt < b.createdAt ? 1 : -1);
   }
-  return Array.from(memStore.users.values()).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  return Array.from(memStore.users.values()).sort((a, b) => a.createdAt < b.createdAt ? 1 : -1);
 }
-
+__name(listUsers, "listUsers");
 async function saveService(env, service) {
   if (env.vpsai) {
     await env.vpsai.put(`services/${service.id}.json`, JSON.stringify(service), {
@@ -177,7 +96,7 @@ async function saveService(env, service) {
   }
   memStore.services.set(service.id, service);
 }
-
+__name(saveService, "saveService");
 async function getService(env, id) {
   if (env.vpsai) {
     const object = await env.vpsai.get(`services/${id}.json`);
@@ -187,7 +106,7 @@ async function getService(env, id) {
   }
   return memStore.services.get(id) || null;
 }
-
+__name(getService, "getService");
 async function listServices(env) {
   if (env.vpsai) {
     const listed = await env.vpsai.list({ prefix: "services/" });
@@ -199,19 +118,11 @@ async function listServices(env) {
         return raw ? JSON.parse(raw) : null;
       })
     );
-    return services.filter(Boolean).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    return services.filter(Boolean).sort((a, b) => a.createdAt < b.createdAt ? 1 : -1);
   }
-  return Array.from(memStore.services.values()).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  return Array.from(memStore.services.values()).sort((a, b) => a.createdAt < b.createdAt ? 1 : -1);
 }
-
-async function deleteService(env, id) {
-  if (env.vpsai) {
-    await env.vpsai.delete(`services/${id}.json`);
-    return;
-  }
-  memStore.services.delete(id);
-}
-
+__name(listServices, "listServices");
 async function saveApiKey(env, apiKeyObj) {
   if (env.vpsai) {
     await env.vpsai.put(`apikeys/${apiKeyObj.key}.json`, JSON.stringify(apiKeyObj), {
@@ -221,7 +132,7 @@ async function saveApiKey(env, apiKeyObj) {
   }
   memStore.apikeys.set(apiKeyObj.key, apiKeyObj);
 }
-
+__name(saveApiKey, "saveApiKey");
 async function getApiKey(env, key) {
   if (env.vpsai) {
     const object = await env.vpsai.get(`apikeys/${key}.json`);
@@ -231,7 +142,7 @@ async function getApiKey(env, key) {
   }
   return memStore.apikeys.get(key) || null;
 }
-
+__name(getApiKey, "getApiKey");
 async function listUserApiKeys(env, username) {
   if (env.vpsai) {
     const listed = await env.vpsai.list({ prefix: "apikeys/" });
@@ -247,7 +158,7 @@ async function listUserApiKeys(env, username) {
   }
   return Array.from(memStore.apikeys.values()).filter((k) => k.username === username);
 }
-
+__name(listUserApiKeys, "listUserApiKeys");
 async function saveSession(env, session) {
   if (env.vpsai) {
     await env.vpsai.put(`sessions/${session.token}.json`, JSON.stringify(session), {
@@ -257,7 +168,7 @@ async function saveSession(env, session) {
   }
   memStore.sessions.set(session.token, session);
 }
-
+__name(saveSession, "saveSession");
 async function getSession(env, token) {
   if (env.vpsai) {
     const object = await env.vpsai.get(`sessions/${token}.json`);
@@ -267,7 +178,7 @@ async function getSession(env, token) {
   }
   return memStore.sessions.get(token) || null;
 }
-
+__name(getSession, "getSession");
 async function getUsage(env, serviceId, username) {
   const storageKey = `${serviceId}___${username}`;
   const r2Key = `usage/${storageKey}.json`;
@@ -279,7 +190,7 @@ async function getUsage(env, serviceId, username) {
   }
   return memStore.usage.get(storageKey) || { count: 0 };
 }
-
+__name(getUsage, "getUsage");
 async function incrementUsage(env, serviceId, username) {
   const usage = await getUsage(env, serviceId, username);
   usage.count = (usage.count || 0) + 1;
@@ -294,7 +205,7 @@ async function incrementUsage(env, serviceId, username) {
   }
   memStore.usage.set(storageKey, usage);
 }
-
+__name(incrementUsage, "incrementUsage");
 async function listAllUsage(env) {
   if (env.vpsai) {
     const listed = await env.vpsai.list({ prefix: "usage/" });
@@ -318,7 +229,7 @@ async function listAllUsage(env) {
   }
   return result;
 }
-
+__name(listAllUsage, "listAllUsage");
 async function addLog(env, log) {
   const logEntry = {
     timestamp: nowIso(),
@@ -334,7 +245,7 @@ async function addLog(env, log) {
   memStore.logs.unshift(logEntry);
   memStore.logs = memStore.logs.slice(0, 500);
 }
-
+__name(addLog, "addLog");
 async function listLogs(env, limit = 50) {
   const safeLimit = Math.max(1, Math.min(Number(limit) || 50, 200));
   if (env.vpsai) {
@@ -347,11 +258,11 @@ async function listLogs(env, limit = 50) {
         return raw ? JSON.parse(raw) : null;
       })
     );
-    return logs.filter(Boolean).sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+    return logs.filter(Boolean).sort((a, b) => a.timestamp < b.timestamp ? 1 : -1);
   }
   return memStore.logs.slice(0, safeLimit);
 }
-
+__name(listLogs, "listLogs");
 async function deleteLogs(env) {
   if (env.vpsai) {
     const listed = await env.vpsai.list({ prefix: "logs/" });
@@ -360,13 +271,13 @@ async function deleteLogs(env) {
   }
   memStore.logs = [];
 }
-
+__name(deleteLogs, "deleteLogs");
 function requireAdmin(request, env) {
   const token = request.headers.get("x-admin-token") || "";
   const expected = env.ADMIN_TOKEN || "";
   return expected && token === expected;
 }
-
+__name(requireAdmin, "requireAdmin");
 async function parseBody(request) {
   try {
     return await request.json();
@@ -374,7 +285,7 @@ async function parseBody(request) {
     throw new Error("Body JSON tidak valid");
   }
 }
-
+__name(parseBody, "parseBody");
 function corsHeaders() {
   return {
     "access-control-allow-origin": "*",
@@ -382,26 +293,26 @@ function corsHeaders() {
     "access-control-allow-headers": "content-type,x-admin-token,x-user-token,authorization,x-api-key"
   };
 }
-
+__name(corsHeaders, "corsHeaders");
 function withCors(response) {
   const headers = new Headers(response.headers);
   Object.entries(corsHeaders()).forEach(([k, v]) => headers.set(k, v));
   return new Response(response.body, { status: response.status, headers });
 }
-
+__name(withCors, "withCors");
 function notFound() {
   return json({ error: "Endpoint tidak ditemukan" }, 404);
 }
-
-const appHtml = `<!DOCTYPE html>
+__name(notFound, "notFound");
+var appHtml = `<!DOCTYPE html>
 <html lang="id" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API Relay - User Portal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+    <script src="https://unpkg.com/lucide@latest"><\/script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -450,7 +361,7 @@ const appHtml = `<!DOCTYPE html>
                 }
             }
         }
-    </script>
+    <\/script>
     <style>
         .glass-effect {
             background: rgba(30, 41, 59, 0.7);
@@ -945,7 +856,7 @@ const appHtml = `<!DOCTYPE html>
             sidebarCollapsed: false
         };
 
-        const \$ = id => document.getElementById(id);
+        const $ = id => document.getElementById(id);
         const esc = str => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 
         async function api(path, opts = {}) {
@@ -959,77 +870,77 @@ const appHtml = `<!DOCTYPE html>
         }
 
         function showToast(msg) {
-            \$('toastMessage').innerText = msg;
-            \$('toast').classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => \$('toast').classList.add('translate-y-20', 'opacity-0'), 3000);
+            $('toastMessage').innerText = msg;
+            $('toast').classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => $('toast').classList.add('translate-y-20', 'opacity-0'), 3000);
         }
 
         function togglePass(id) {
-            const input = \$(id);
+            const input = $(id);
             input.type = input.type === 'password' ? 'text' : 'password';
         }
 
         function toggleAuth(mode) {
-            \$('loginForm').classList.add('hidden');
-            \$('registerForm').classList.add('hidden');
-            \$('adminForm').classList.add('hidden');
-            \$('auth-msg').innerText = '';
+            $('loginForm').classList.add('hidden');
+            $('registerForm').classList.add('hidden');
+            $('adminForm').classList.add('hidden');
+            $('auth-msg').innerText = '';
 
             if (mode === 'login') {
-                \$('loginForm').classList.remove('hidden');
-                \$('auth-title').innerText = 'API Relay Portal';
-                \$('auth-subtitle').innerText = 'Access your API dashboard';
+                $('loginForm').classList.remove('hidden');
+                $('auth-title').innerText = 'API Relay Portal';
+                $('auth-subtitle').innerText = 'Access your API dashboard';
             } else if (mode === 'register') {
-                \$('registerForm').classList.remove('hidden');
-                \$('auth-title').innerText = 'Create Account';
-                \$('auth-subtitle').innerText = 'Join our API community';
+                $('registerForm').classList.remove('hidden');
+                $('auth-title').innerText = 'Create Account';
+                $('auth-subtitle').innerText = 'Join our API community';
             } else {
-                \$('adminForm').classList.remove('hidden');
-                \$('auth-title').innerText = 'Admin Access';
-                \$('auth-subtitle').innerText = 'Secure administrator panel';
+                $('adminForm').classList.remove('hidden');
+                $('auth-title').innerText = 'Admin Access';
+                $('auth-subtitle').innerText = 'Secure administrator panel';
             }
         }
 
-        \$('loginForm').onsubmit = async (e) => {
+        $('loginForm').onsubmit = async (e) => {
             e.preventDefault();
             try {
-                const res = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: \$('l-user').value, password: \$('l-pass').value }) });
+                const res = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: $('l-user').value, password: $('l-pass').value }) });
                 state.token = res.token;
                 localStorage.setItem('tok', res.token);
-                \$('display-username').innerText = res.user.username;
-                \$('welcome-name').innerText = res.user.username + '!';
-                \$('user-initials').innerText = res.user.username.slice(0,2).toUpperCase();
-                \$('loginOverlay').classList.add('hidden');
-                \$('mainApp').classList.remove('hidden');
+                $('display-username').innerText = res.user.username;
+                $('welcome-name').innerText = res.user.username + '!';
+                $('user-initials').innerText = res.user.username.slice(0,2).toUpperCase();
+                $('loginOverlay').classList.add('hidden');
+                $('mainApp').classList.remove('hidden');
                 initDashboard();
             } catch (e) {
-                \$('auth-msg').className = 'mt-6 text-center text-sm text-red-400';
-                \$('auth-msg').innerText = '❌ ' + e.message;
+                $('auth-msg').className = 'mt-6 text-center text-sm text-red-400';
+                $('auth-msg').innerText = '\u274C ' + e.message;
             }
         };
 
-        \$('registerForm').onsubmit = async (e) => {
+        $('registerForm').onsubmit = async (e) => {
             e.preventDefault();
             try {
-                const res = await api('/api/auth/register', { method: 'POST', body: JSON.stringify({ username: \$('r-user').value, password: \$('r-pass').value }) });
-                \$('auth-msg').className = 'mt-6 text-center text-sm text-green-400';
-                \$('auth-msg').innerText = '✅ ' + res.message;
+                const res = await api('/api/auth/register', { method: 'POST', body: JSON.stringify({ username: $('r-user').value, password: $('r-pass').value }) });
+                $('auth-msg').className = 'mt-6 text-center text-sm text-green-400';
+                $('auth-msg').innerText = '\u2705 ' + res.message;
                 setTimeout(() => toggleAuth('login'), 2000);
             } catch (e) {
-                \$('auth-msg').className = 'mt-6 text-center text-sm text-red-400';
-                \$('auth-msg').innerText = '❌ ' + e.message;
+                $('auth-msg').className = 'mt-6 text-center text-sm text-red-400';
+                $('auth-msg').innerText = '\u274C ' + e.message;
             }
         };
 
-        \$('adminForm').onsubmit = (e) => {
+        $('adminForm').onsubmit = (e) => {
             e.preventDefault();
-            state.adminToken = \$('a-token').value;
+            state.adminToken = $('a-token').value;
             if (!state.adminToken) return;
             sessionStorage.setItem('atok', state.adminToken);
-            \$('user-role-display').innerText = 'Admin Panel';
-            \$('admin-nav').classList.remove('hidden');
-            \$('loginOverlay').classList.add('hidden');
-            \$('mainApp').classList.remove('hidden');
+            $('user-role-display').innerText = 'Admin Panel';
+            $('admin-nav').classList.remove('hidden');
+            $('loginOverlay').classList.add('hidden');
+            $('mainApp').classList.remove('hidden');
             switchTab('admin-users');
         };
 
@@ -1045,7 +956,7 @@ const appHtml = `<!DOCTYPE html>
             event.currentTarget?.classList.add('bg-primary-500', 'bg-opacity-10', 'text-primary-400', 'border', 'border-primary-500', 'border-opacity-20');
 
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            \$(tab + 'Tab').classList.remove('hidden');
+            $(tab + 'Tab').classList.remove('hidden');
             state.currentTab = tab;
 
             const titles = {
@@ -1058,7 +969,7 @@ const appHtml = `<!DOCTYPE html>
                 'admin-svcs': 'API Services',
                 'admin-logs': 'System Logs'
             };
-            \$('pageTitle').textContent = titles[tab] || 'Dashboard';
+            $('pageTitle').textContent = titles[tab] || 'Dashboard';
 
             if (tab === 'services') loadServices();
             if (tab === 'credentials') loadKeys();
@@ -1070,9 +981,9 @@ const appHtml = `<!DOCTYPE html>
         async function initDashboard() {
             try {
                 const res = await api('/api/user/stats');
-                \$('stat-today-req').innerText = res.stats.todayRequests;
-                \$('stat-success-rate').innerText = res.stats.successRate;
-                \$('stat-avg-latency').innerText = res.stats.avgLatency;
+                $('stat-today-req').innerText = res.stats.todayRequests;
+                $('stat-success-rate').innerText = res.stats.successRate;
+                $('stat-avg-latency').innerText = res.stats.avgLatency;
                 initOverviewChart();
             } catch (e) { console.error(e); }
         }
@@ -1080,7 +991,7 @@ const appHtml = `<!DOCTYPE html>
         async function loadServices() {
             try {
                 const res = await api('/api/user/services');
-                \$('svc-list').innerHTML = res.items.map(s => \`
+                $('svc-list').innerHTML = res.items.map(s => \`
                     <div class="glass-effect rounded-xl p-6 hover:border-primary-500/50 transition-all border border-gray-800">
                         <div class="flex items-center gap-3 mb-4">
                             <div class="p-2 bg-primary-500/10 rounded-lg text-primary-400"><i data-lucide="package"></i></div>
@@ -1088,7 +999,7 @@ const appHtml = `<!DOCTYPE html>
                         </div>
                         <p class="text-sm text-gray-400 mb-4 line-clamp-2">\${esc(s.documentation || 'No description.')}</p>
                         <div class="text-xs text-gray-500 mb-4">
-                           <div class="flex justify-between mb-1"><span>Usage</span><span>\${s.userUsage} / \${s.limit || '∞'}</span></div>
+                           <div class="flex justify-between mb-1"><span>Usage</span><span>\${s.userUsage} / \${s.limit || '\u221E'}</span></div>
                            <div class="w-full bg-gray-800 h-1.5 rounded-full"><div class="bg-primary-500 h-1.5 rounded-full" style="width: \${Math.min(100, (s.userUsage/(s.limit||10000))*100)}%"></div></div>
                         </div>
                         <button onclick="openSvcDocs('\${s.id}')" class="w-full py-2 border border-primary-500/30 text-primary-400 rounded-lg hover:bg-primary-500/10 transition-all text-sm">View Docs & Keys</button>
@@ -1101,8 +1012,8 @@ const appHtml = `<!DOCTYPE html>
         async function openSvcDocs(id) {
             const res = await api('/api/user/services');
             const s = res.items.find(x => x.id === id);
-            \$('modal-title').innerText = s.name;
-            \$('modal-body').innerHTML = \`
+            $('modal-title').innerText = s.name;
+            $('modal-body').innerHTML = \`
                 <div class="space-y-4">
                     <div class="p-4 bg-dark-800 rounded-lg border border-gray-700">
                         <p class="text-xs text-gray-500 uppercase font-bold mb-1">Target Endpoint</p>
@@ -1114,7 +1025,7 @@ const appHtml = `<!DOCTYPE html>
                     </div>
                 </div>
             \`;
-            \$('modal-footer').innerHTML = \`
+            $('modal-footer').innerHTML = \`
                 <div class="flex flex-col gap-4">
                     <p class="font-semibold text-gray-200">Generate New API Key</p>
                     <div class="flex gap-2">
@@ -1123,12 +1034,12 @@ const appHtml = `<!DOCTYPE html>
                     </div>
                 </div>
             \`;
-            \$('modal').classList.remove('hidden');
+            $('modal').classList.remove('hidden');
         }
 
         async function generateKey(svcId) {
             try {
-                await api('/api/user/keys', { method: 'POST', body: JSON.stringify({ serviceId: svcId, name: \$('new-key-name').value }) });
+                await api('/api/user/keys', { method: 'POST', body: JSON.stringify({ serviceId: svcId, name: $('new-key-name').value }) });
                 closeModal();
                 showToast('API Key generated successfully');
                 switchTab('credentials');
@@ -1138,7 +1049,7 @@ const appHtml = `<!DOCTYPE html>
         async function loadKeys() {
             try {
                 const res = await api('/api/user/keys');
-                \$('keys-body').innerHTML = res.items.map(k => \`
+                $('keys-body').innerHTML = res.items.map(k => \`
                     <tr>
                         <td class="px-6 py-4">\${esc(k.name)}</td>
                         <td class="px-6 py-4 text-gray-400 text-xs">\${esc(k.serviceId)}</td>
@@ -1151,7 +1062,7 @@ const appHtml = `<!DOCTYPE html>
         async function loadLogs() {
             try {
                 const res = await api('/api/user/logs');
-                \$('logsTable').innerHTML = res.items.map(l => \`
+                $('logsTable').innerHTML = res.items.map(l => \`
                     <tr class="hover:bg-dark-800/50 transition-colors">
                         <td class="px-6 py-4 text-xs text-gray-400 font-mono">\${new Date(l.timestamp).toLocaleString()}</td>
                         <td class="px-6 py-4">
@@ -1171,7 +1082,7 @@ const appHtml = `<!DOCTYPE html>
             try {
                 if (tab === 'admin-users') {
                     const res = await api('/api/admin/users');
-                    \$('admin-users-body').innerHTML = res.items.map(u => \`
+                    $('admin-users-body').innerHTML = res.items.map(u => \`
                         <tr>
                             <td class="px-6 py-4">\${esc(u.username)}</td>
                             <td class="px-6 py-4"><span class="tag tag-\${u.status.toLowerCase()}">\${u.status}</span></td>
@@ -1186,7 +1097,7 @@ const appHtml = `<!DOCTYPE html>
                     lucide.createIcons();
                 } else if (tab === 'admin-svcs') {
                    const res = await api('/api/admin/services');
-                   \$('admin-svc-list').innerHTML = res.items.map(s => \`
+                   $('admin-svc-list').innerHTML = res.items.map(s => \`
                         <div class="glass-effect p-4 rounded-xl border border-gray-800 flex justify-between items-center">
                             <div>
                                 <h4 class="font-bold">\${esc(s.name)}</h4>
@@ -1201,7 +1112,7 @@ const appHtml = `<!DOCTYPE html>
                    lucide.createIcons();
                 } else if (tab === 'admin-logs') {
                     const res = await api('/api/admin/logs');
-                    \$('admin-logs-body').innerHTML = res.items.map(l => \`
+                    $('admin-logs-body').innerHTML = res.items.map(l => \`
                         <tr class="text-xs">
                             <td class="px-6 py-3 font-mono text-gray-500">\${new Date(l.timestamp).toLocaleString()}</td>
                             <td class="px-6 py-3 text-gray-300">\${esc(l.username || '-')}</td>
@@ -1220,8 +1131,8 @@ const appHtml = `<!DOCTYPE html>
         async function clearAllLogs() { if(confirm('Clear all logs?')) { await api('/api/admin/logs', { method:'DELETE'}); loadAdminData('admin-logs'); } }
 
         function openCreateSvcModal() {
-            \$('modal-title').innerText = 'Create New API Service';
-            \$('modal-body').innerHTML = \`
+            $('modal-title').innerText = 'Create New API Service';
+            $('modal-body').innerHTML = \`
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Service Name</label>
@@ -1241,10 +1152,10 @@ const appHtml = `<!DOCTYPE html>
                     </div>
                 </div>
             \`;
-            \$('modal-footer').innerHTML = \`
+            $('modal-footer').innerHTML = \`
                 <button onclick="submitSvc()" class="w-full py-3 bg-primary-600 rounded-lg font-bold">Publish API Service</button>
             \`;
-            \$('modal').classList.remove('hidden');
+            $('modal').classList.remove('hidden');
         }
 
         async function submitSvc() {
@@ -1252,10 +1163,10 @@ const appHtml = `<!DOCTYPE html>
                 await api('/api/admin/services', {
                     method: 'POST',
                     body: JSON.stringify({
-                        name: \$('s-name').value,
-                        targetUrl: \$('s-target').value,
-                        limit: \$('s-limit').value,
-                        documentation: \$('s-docs').value
+                        name: $('s-name').value,
+                        targetUrl: $('s-target').value,
+                        limit: $('s-limit').value,
+                        documentation: $('s-docs').value
                     })
                 });
                 closeModal();
@@ -1264,10 +1175,10 @@ const appHtml = `<!DOCTYPE html>
             } catch (e) { alert(e.message); }
         }
 
-        function closeModal() { \$('modal').classList.add('hidden'); }
+        function closeModal() { $('modal').classList.add('hidden'); }
 
         function initOverviewChart() {
-            const ctx = \$('usageChart').getContext('2d');
+            const ctx = $('usageChart').getContext('2d');
             if (state.charts.usage) state.charts.usage.destroy();
             state.charts.usage = new Chart(ctx, {
                 type: 'line',
@@ -1290,8 +1201,8 @@ const appHtml = `<!DOCTYPE html>
 
         function toggleSidebar() {
             state.sidebarCollapsed = !state.sidebarCollapsed;
-            const s = \$('sidebar');
-            const icon = \$('toggleIcon');
+            const s = $('sidebar');
+            const icon = $('toggleIcon');
             if (state.sidebarCollapsed) {
                 s.classList.add('sidebar-collapsed');
                 s.style.width = '80px';
@@ -1304,8 +1215,8 @@ const appHtml = `<!DOCTYPE html>
         }
 
         function toggleMobileSidebar() {
-            const s = \$('sidebar');
-            const o = \$('mobileOverlay');
+            const s = $('sidebar');
+            const o = $('mobileOverlay');
             if (s.classList.contains('-translate-x-full')) {
                 s.classList.remove('-translate-x-full');
                 o.classList.remove('hidden');
@@ -1325,63 +1236,55 @@ const appHtml = `<!DOCTYPE html>
         function toggleTheme() { document.documentElement.classList.toggle('dark'); }
 
         if (state.token) {
-            \$('loginOverlay').classList.add('hidden');
-            \$('mainApp').classList.remove('hidden');
+            $('loginOverlay').classList.add('hidden');
+            $('mainApp').classList.remove('hidden');
             initDashboard();
         } else if (state.adminToken) {
-            \$('loginOverlay').classList.add('hidden');
-            \$('mainApp').classList.remove('hidden');
-            \$('admin-nav').classList.remove('hidden');
-            \$('user-role-display').innerText = 'Admin Panel';
+            $('loginOverlay').classList.add('hidden');
+            $('mainApp').classList.remove('hidden');
+            $('admin-nav').classList.remove('hidden');
+            $('user-role-display').innerText = 'Admin Panel';
             switchTab('admin-users');
         }
-    </script>
+    <\/script>
 </body>
 </html>
 `;
-
-export default {
+var worker_default = {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
       return withCors(new Response(null, { status: 204, headers: corsHeaders() }));
     }
-
     const url = new URL(request.url);
-
     try {
       if (url.pathname === "/") {
         return withCors(new Response(appHtml, { headers: { "content-type": "text/html; charset=utf-8" } }));
       }
-
       if (request.method === "POST" && url.pathname === "/api/auth/register") {
         const body = await parseBody(request);
         const { username, password } = body;
         if (!username || !password) return withCors(json({ error: "Username dan password wajib diisi" }, 400));
         const existing = await getUser(env, username);
         if (existing) return withCors(json({ error: "Username sudah digunakan" }, 400));
-
         const salt = generateSalt();
         const hashedPassword = await hashPassword(password, salt);
         const user = { username, password: hashedPassword, salt, status: "PENDING", createdAt: nowIso() };
         await saveUser(env, user);
         return withCors(json({ ok: true, message: "Pendaftaran berhasil, menunggu persetujuan admin" }, 201));
       }
-
       if (request.method === "POST" && url.pathname === "/api/auth/login") {
         const body = await parseBody(request);
         const { username, password } = body;
         const user = await getUser(env, username);
         if (!user) return withCors(json({ error: "Username atau password salah" }, 401));
-
         const hashedPassword = await hashPassword(password, user.salt || "");
         if (user.password !== hashedPassword) return withCors(json({ error: "Username atau password salah" }, 401));
         if (user.status !== "APPROVED") return withCors(json({ error: "Akun Anda belum disetujui Admin" }, 403));
         const token = crypto.randomUUID();
-        const session = { token, username, expiresAt: Date.now() + 86400000 };
+        const session = { token, username, expiresAt: Date.now() + 864e5 };
         await saveSession(env, session);
         return withCors(json({ ok: true, token, user: { username: user.username } }));
       }
-
       let authedUsername = null;
       if (url.pathname.startsWith("/api/")) {
         const authHeader = request.headers.get("Authorization") || "";
@@ -1391,27 +1294,22 @@ export default {
           authedUsername = session.username;
         }
       }
-
       if (url.pathname.startsWith("/api/admin")) {
         if (!requireAdmin(request, env)) {
           return withCors(json({ error: "Unauthorized admin" }, 401));
         }
-
         if (request.method === "GET" && url.pathname === "/api/admin/users") {
           const items = await listUsers(env);
           return withCors(json({ ok: true, items }));
         }
-
         if (request.method === "GET" && url.pathname === "/api/admin/logs") {
           const items = await listLogs(env, url.searchParams.get("limit") || 100);
           return withCors(json({ ok: true, items }));
         }
-
         if (request.method === "DELETE" && url.pathname === "/api/admin/logs") {
           await deleteLogs(env);
           return withCors(json({ ok: true }));
         }
-
         if (request.method === "PATCH" && url.pathname.startsWith("/api/admin/users/")) {
           const username = url.pathname.split("/").pop();
           const user = await getUser(env, username);
@@ -1421,83 +1319,69 @@ export default {
           await saveUser(env, user);
           return withCors(json({ ok: true, user }));
         }
-
         if (request.method === "DELETE" && url.pathname.startsWith("/api/admin/users/")) {
           const username = url.pathname.split("/").pop();
           await deleteUser(env, username);
           return withCors(json({ ok: true }));
         }
-
         if (request.method === "POST" && url.pathname === "/api/admin/services") {
           const body = await parseBody(request);
           const name = (body.name || "").trim();
           const targetUrl = normalizeTarget(body.targetUrl || "");
           const documentation = (body.documentation || "").trim();
-
           if (!name) return withCors(json({ error: "Nama API wajib diisi" }, 400));
-
-        const limit = Number(body.limit) || 0;
-
+          const limit = Number(body.limit) || 0;
           const item = {
             id: generateId("api"),
             name,
             targetUrl,
             method: "ANY",
             documentation,
-          limit,
+            limit,
             active: true,
             createdAt: nowIso()
           };
-
           await saveService(env, item);
           return withCors(json({ ok: true, item }, 201));
         }
-
         if (request.method === "GET" && url.pathname === "/api/admin/services") {
           const items = await listServices(env);
           const usageData = await listAllUsage(env);
-          const withUsage = items.map(s => {
-            const usages = usageData.filter(u => u.serviceId === s.id);
+          const withUsage = items.map((s) => {
+            const usages = usageData.filter((u) => u.serviceId === s.id);
             return { ...s, usages };
           });
           return withCors(json({ ok: true, items: withUsage }));
         }
-
         if (request.method === "GET" && url.pathname === "/api/admin/stats") {
           const [services, usage] = await Promise.all([
             listServices(env),
             listAllUsage(env)
           ]);
-
           const totalRequests = usage.reduce((sum, u) => sum + (u.count || 0), 0);
-
           return withCors(json({
             ok: true,
             stats: {
-              activeRoutes: services.filter(s => s.active).length,
+              activeRoutes: services.filter((s) => s.active).length,
               totalRequests,
               errorRate: "0.0%",
               avgLatency: "145ms"
             }
           }));
         }
-
         return withCors(notFound());
       }
-
       if (url.pathname.startsWith("/api/user")) {
         if (!authedUsername) return withCors(json({ error: "Silahkan login" }, 401));
-
         if (request.method === "GET" && url.pathname === "/api/user/services") {
           const items = await listServices(env);
-          const services = items.filter(s => s.active);
+          const services = items.filter((s) => s.active);
           const withUsage = await Promise.all(services.map(async (s) => {
             const usage = await getUsage(env, s.id, authedUsername);
             return { ...s, userUsage: usage.count || 0 };
           }));
           return withCors(json({ ok: true, items: withUsage }));
         }
-
         if (request.method === "POST" && url.pathname === "/api/user/keys") {
           const body = await parseBody(request);
           const { serviceId, name } = body;
@@ -1514,31 +1398,24 @@ export default {
           await saveApiKey(env, apiKeyObj);
           return withCors(json({ ok: true, item: apiKeyObj }, 201));
         }
-
         if (request.method === "GET" && url.pathname === "/api/user/keys") {
           const items = await listUserApiKeys(env, authedUsername);
           return withCors(json({ ok: true, items }));
         }
-
         if (request.method === "GET" && url.pathname === "/api/user/logs") {
           const allLogs = await listLogs(env, 200);
-          const items = allLogs.filter(l => l.username === authedUsername);
+          const items = allLogs.filter((l) => l.username === authedUsername);
           return withCors(json({ ok: true, items }));
         }
-
         if (request.method === "GET" && url.pathname === "/api/user/stats") {
           const allLogs = await listLogs(env, 500);
-          const userLogs = allLogs.filter(l => l.username === authedUsername);
-
-          const today = new Date().toISOString().split('T')[0];
-          const todayLogs = userLogs.filter(l => l.timestamp && l.timestamp.startsWith(today));
-
-          const successCount = userLogs.filter(l => l.status >= 200 && l.status < 400).length;
-          const successRate = userLogs.length > 0 ? ((successCount / userLogs.length) * 100).toFixed(1) + '%' : '0%';
-
-          const latencies = userLogs.map(l => parseInt(l.latency) || 0).filter(l => l > 0);
-          const avgLatency = latencies.length > 0 ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) + 'ms' : '0ms';
-
+          const userLogs = allLogs.filter((l) => l.username === authedUsername);
+          const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+          const todayLogs = userLogs.filter((l) => l.timestamp && l.timestamp.startsWith(today));
+          const successCount = userLogs.filter((l) => l.status >= 200 && l.status < 400).length;
+          const successRate = userLogs.length > 0 ? (successCount / userLogs.length * 100).toFixed(1) + "%" : "0%";
+          const latencies = userLogs.map((l) => parseInt(l.latency) || 0).filter((l) => l > 0);
+          const avgLatency = latencies.length > 0 ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) + "ms" : "0ms";
           return withCors(json({
             ok: true,
             stats: {
@@ -1548,60 +1425,48 @@ export default {
             }
           }));
         }
-
         return withCors(notFound());
       }
-
       if (url.pathname.startsWith("/u/")) {
         const id = url.pathname.split("/")[2];
         const route = await getService(env, id);
         if (!route || !route.active) {
           return withCors(json({ error: "API tidak ditemukan atau tidak aktif" }, 404));
         }
-
         const apiKeyHeader = request.headers.get("x-api-key");
         if (!apiKeyHeader) return withCors(json({ error: "x-api-key wajib diisi" }, 401));
-
         const keyData = await getApiKey(env, apiKeyHeader);
         if (!keyData || keyData.serviceId !== id) {
           return withCors(json({ error: "API Key tidak valid untuk service ini" }, 401));
         }
-
         const authedUser = await getUser(env, keyData.username);
         if (!authedUser || authedUser.status !== "APPROVED") {
           return withCors(json({ error: "User belum disetujui Admin" }, 403));
         }
-
         if (route.limit > 0) {
           const usage = await getUsage(env, id, keyData.username);
           if (usage.count >= route.limit) {
             return withCors(json({ error: "Batas penggunaan API tercapai" }, 429));
           }
         }
-
         const outgoingHeaders = new Headers(request.headers);
         outgoingHeaders.delete("host");
         outgoingHeaders.delete("x-api-key");
-
         const targetUrl = new URL(route.targetUrl);
         url.searchParams.forEach((v, k) => targetUrl.searchParams.set(k, v));
-
         const start = Date.now();
         try {
           const upstream = await fetch(targetUrl.toString(), {
             method: request.method,
             headers: outgoingHeaders,
-            body: ["GET", "HEAD"].includes(request.method) ? undefined : request.body,
+            body: ["GET", "HEAD"].includes(request.method) ? void 0 : request.body,
             redirect: "follow"
           });
-
           const proxyHeaders = new Headers(upstream.headers);
           Object.entries(corsHeaders()).forEach(([k, v]) => proxyHeaders.set(k, v));
-
           if (upstream.ok) {
             await incrementUsage(env, id, keyData.username);
           }
-
           const latency = `${Date.now() - start}ms`;
           await addLog(env, {
             method: request.method,
@@ -1612,7 +1477,6 @@ export default {
             routeId: id,
             message: `Proxy request to ${route.name}`
           });
-
           return new Response(upstream.body, {
             status: upstream.status,
             headers: proxyHeaders
@@ -1621,10 +1485,184 @@ export default {
           return withCors(json({ error: "Gagal terhubung ke API tujuan" }, 502));
         }
       }
-
       return withCors(notFound());
     } catch (err) {
       return withCors(json({ error: err.message || "Internal Server Error" }, 500));
     }
   }
 };
+
+// ../home/jules/.npm/_npx/32026684e21afda6/node_modules/wrangler/templates/middleware/middleware-ensure-req-body-drained.ts
+var drainBody = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx) => {
+  try {
+    return await middlewareCtx.next(request, env);
+  } finally {
+    try {
+      if (request.body !== null && !request.bodyUsed) {
+        const reader = request.body.getReader();
+        while (!(await reader.read()).done) {
+        }
+      }
+    } catch (e) {
+      console.error("Failed to drain the unused request body.", e);
+    }
+  }
+}, "drainBody");
+var middleware_ensure_req_body_drained_default = drainBody;
+
+// ../home/jules/.npm/_npx/32026684e21afda6/node_modules/wrangler/templates/middleware/middleware-miniflare3-json-error.ts
+function reduceError(e) {
+  return {
+    name: e?.name,
+    message: e?.message ?? String(e),
+    stack: e?.stack,
+    cause: e?.cause === void 0 ? void 0 : reduceError(e.cause)
+  };
+}
+__name(reduceError, "reduceError");
+var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx) => {
+  try {
+    return await middlewareCtx.next(request, env);
+  } catch (e) {
+    const error = reduceError(e);
+    return Response.json(error, {
+      status: 500,
+      headers: { "MF-Experimental-Error-Stack": "true" }
+    });
+  }
+}, "jsonError");
+var middleware_miniflare3_json_error_default = jsonError;
+
+// .wrangler/tmp/bundle-7ouZ5I/middleware-insertion-facade.js
+var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
+  middleware_ensure_req_body_drained_default,
+  middleware_miniflare3_json_error_default
+];
+var middleware_insertion_facade_default = worker_default;
+
+// ../home/jules/.npm/_npx/32026684e21afda6/node_modules/wrangler/templates/middleware/common.ts
+var __facade_middleware__ = [];
+function __facade_register__(...args) {
+  __facade_middleware__.push(...args.flat());
+}
+__name(__facade_register__, "__facade_register__");
+function __facade_invokeChain__(request, env, ctx, dispatch, middlewareChain) {
+  const [head, ...tail] = middlewareChain;
+  const middlewareCtx = {
+    dispatch,
+    next(newRequest, newEnv) {
+      return __facade_invokeChain__(newRequest, newEnv, ctx, dispatch, tail);
+    }
+  };
+  return head(request, env, ctx, middlewareCtx);
+}
+__name(__facade_invokeChain__, "__facade_invokeChain__");
+function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
+  return __facade_invokeChain__(request, env, ctx, dispatch, [
+    ...__facade_middleware__,
+    finalMiddleware
+  ]);
+}
+__name(__facade_invoke__, "__facade_invoke__");
+
+// .wrangler/tmp/bundle-7ouZ5I/middleware-loader.entry.ts
+var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
+  constructor(scheduledTime, cron, noRetry) {
+    this.scheduledTime = scheduledTime;
+    this.cron = cron;
+    this.#noRetry = noRetry;
+  }
+  static {
+    __name(this, "__Facade_ScheduledController__");
+  }
+  #noRetry;
+  noRetry() {
+    if (!(this instanceof ___Facade_ScheduledController__)) {
+      throw new TypeError("Illegal invocation");
+    }
+    this.#noRetry();
+  }
+};
+function wrapExportedHandler(worker) {
+  if (__INTERNAL_WRANGLER_MIDDLEWARE__ === void 0 || __INTERNAL_WRANGLER_MIDDLEWARE__.length === 0) {
+    return worker;
+  }
+  for (const middleware of __INTERNAL_WRANGLER_MIDDLEWARE__) {
+    __facade_register__(middleware);
+  }
+  const fetchDispatcher = /* @__PURE__ */ __name(function(request, env, ctx) {
+    if (worker.fetch === void 0) {
+      throw new Error("Handler does not export a fetch() function.");
+    }
+    return worker.fetch(request, env, ctx);
+  }, "fetchDispatcher");
+  return {
+    ...worker,
+    fetch(request, env, ctx) {
+      const dispatcher = /* @__PURE__ */ __name(function(type, init) {
+        if (type === "scheduled" && worker.scheduled !== void 0) {
+          const controller = new __Facade_ScheduledController__(
+            Date.now(),
+            init.cron ?? "",
+            () => {
+            }
+          );
+          return worker.scheduled(controller, env, ctx);
+        }
+      }, "dispatcher");
+      return __facade_invoke__(request, env, ctx, dispatcher, fetchDispatcher);
+    }
+  };
+}
+__name(wrapExportedHandler, "wrapExportedHandler");
+function wrapWorkerEntrypoint(klass) {
+  if (__INTERNAL_WRANGLER_MIDDLEWARE__ === void 0 || __INTERNAL_WRANGLER_MIDDLEWARE__.length === 0) {
+    return klass;
+  }
+  for (const middleware of __INTERNAL_WRANGLER_MIDDLEWARE__) {
+    __facade_register__(middleware);
+  }
+  return class extends klass {
+    #fetchDispatcher = /* @__PURE__ */ __name((request, env, ctx) => {
+      this.env = env;
+      this.ctx = ctx;
+      if (super.fetch === void 0) {
+        throw new Error("Entrypoint class does not define a fetch() function.");
+      }
+      return super.fetch(request);
+    }, "#fetchDispatcher");
+    #dispatcher = /* @__PURE__ */ __name((type, init) => {
+      if (type === "scheduled" && super.scheduled !== void 0) {
+        const controller = new __Facade_ScheduledController__(
+          Date.now(),
+          init.cron ?? "",
+          () => {
+          }
+        );
+        return super.scheduled(controller);
+      }
+    }, "#dispatcher");
+    fetch(request) {
+      return __facade_invoke__(
+        request,
+        this.env,
+        this.ctx,
+        this.#dispatcher,
+        this.#fetchDispatcher
+      );
+    }
+  };
+}
+__name(wrapWorkerEntrypoint, "wrapWorkerEntrypoint");
+var WRAPPED_ENTRY;
+if (typeof middleware_insertion_facade_default === "object") {
+  WRAPPED_ENTRY = wrapExportedHandler(middleware_insertion_facade_default);
+} else if (typeof middleware_insertion_facade_default === "function") {
+  WRAPPED_ENTRY = wrapWorkerEntrypoint(middleware_insertion_facade_default);
+}
+var middleware_loader_entry_default = WRAPPED_ENTRY;
+export {
+  __INTERNAL_WRANGLER_MIDDLEWARE__,
+  middleware_loader_entry_default as default
+};
+//# sourceMappingURL=worker.js.map
