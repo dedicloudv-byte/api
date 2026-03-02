@@ -936,6 +936,27 @@ const appHtml = `<!DOCTYPE html>
     </div>
 
     <script>
+        window.toggleAuth = function(mode) {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('adminForm').classList.add('hidden');
+            document.getElementById('auth-msg').innerText = '';
+
+            if (mode === 'login') {
+                document.getElementById('loginForm').classList.remove('hidden');
+                document.getElementById('auth-title').innerText = 'API Relay Portal';
+                document.getElementById('auth-subtitle').innerText = 'Access your API dashboard';
+            } else if (mode === 'register') {
+                document.getElementById('registerForm').classList.remove('hidden');
+                document.getElementById('auth-title').innerText = 'Create Account';
+                document.getElementById('auth-subtitle').innerText = 'Join our API community';
+            } else if (mode === 'admin') {
+                document.getElementById('adminForm').classList.remove('hidden');
+                document.getElementById('auth-title').innerText = 'Admin Access';
+                document.getElementById('auth-subtitle').innerText = 'Secure administrator panel';
+            }
+        };
+
         lucide.createIcons();
         let state = {
             token: localStorage.getItem('tok'),
@@ -969,26 +990,6 @@ const appHtml = `<!DOCTYPE html>
             input.type = input.type === 'password' ? 'text' : 'password';
         }
 
-        function toggleAuth(mode) {
-            \$('loginForm').classList.add('hidden');
-            \$('registerForm').classList.add('hidden');
-            \$('adminForm').classList.add('hidden');
-            \$('auth-msg').innerText = '';
-
-            if (mode === 'login') {
-                \$('loginForm').classList.remove('hidden');
-                \$('auth-title').innerText = 'API Relay Portal';
-                \$('auth-subtitle').innerText = 'Access your API dashboard';
-            } else if (mode === 'register') {
-                \$('registerForm').classList.remove('hidden');
-                \$('auth-title').innerText = 'Create Account';
-                \$('auth-subtitle').innerText = 'Join our API community';
-            } else {
-                \$('adminForm').classList.remove('hidden');
-                \$('auth-title').innerText = 'Admin Access';
-                \$('auth-subtitle').innerText = 'Secure administrator panel';
-            }
-        }
 
         \$('loginForm').onsubmit = async (e) => {
             e.preventDefault();
