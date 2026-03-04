@@ -1,8 +1,8 @@
 name: Dependabot auto-merge
 
 on:
-  pull_request:
   pull_request_target:
+    types: [opened, reopened, synchronize]
   workflow_dispatch:
 
 permissions:
@@ -47,14 +47,7 @@ jobs:
           echo "Timeout waiting for tests"
           exit 1
       
-      - name: Enable auto-merge for Dependabot PRs
-        run: |
-          gh pr merge --auto --merge "$PR_URL" || true
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Merge the PR
+      - name: Enable auto-merge and merge the PR
         if: steps.wait-tests.outcome == 'success'
         run: |
           # Check if PR is mergeable
@@ -62,10 +55,11 @@ jobs:
             "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
             | jq -r '.mergeable_state')
           
-          if [ "$PR_STATE" = "clean" ] || [ "$PR_STATE" = "has_hooks" ]; then
-            gh pr merge --admin --merge "$PR_URL"
+          if [ "$PR_STATE" = "clean" ] || [ "$PR_STATE" = "has_hooks" ] || [ "$PR_STATE" = "unstable" ]; then
+            gh pr merge --auto --merge "$PR_URL"
           else
             echo "PR is not mergeable yet (state: $PR_STATE)"
+            exit 1
           fi
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
