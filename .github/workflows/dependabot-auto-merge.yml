@@ -1,0 +1,72 @@
+name: Dependabot auto-merge
+
+on:
+  pull_request:
+  pull_request_target:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+      
+      - name: Wait for tests to pass
+        id: wait-tests
+        run: |
+          # Wait for all status checks to pass
+          # This loop checks every 30 seconds until all checks pass or timeout after 1 hour
+          timeout=3600
+          elapsed=0
+          
+          while [ $elapsed -lt $timeout ]; do
+            # Get the combined status of all checks
+            status=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }}/status" \
+              | jq -r '.state')
+            
+            if [ "$status" = "success" ]; then
+              echo "All tests passed!"
+              exit 0
+            fi
+            
+            echo "Waiting for tests to pass... Current status: $status"
+            sleep 30
+            elapsed=$((elapsed + 30))
+          done
+          
+          echo "Timeout waiting for tests"
+          exit 1
+      
+      - name: Enable auto-merge for Dependabot PRs
+        run: |
+          gh pr merge --auto --merge "$PR_URL" || true
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Merge the PR
+        if: steps.wait-tests.outcome == 'success'
+        run: |
+          # Check if PR is mergeable
+          PR_STATE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
+            | jq -r '.mergeable_state')
+          
+          if [ "$PR_STATE" = "clean" ] || [ "$PR_STATE" = "has_hooks" ]; then
+            gh pr merge --admin --merge "$PR_URL"
+          else
+            echo "PR is not mergeable yet (state: $PR_STATE)"
+          fi
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
