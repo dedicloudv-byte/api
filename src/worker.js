@@ -1022,16 +1022,29 @@ const appHtml = `<!DOCTYPE html>
             }
         };
 
-        \$('adminForm').onsubmit = (e) => {
+        \$('adminForm').onsubmit = async (e) => {
             e.preventDefault();
-            state.adminToken = \$('a-token').value;
-            if (!state.adminToken) return;
-            sessionStorage.setItem('atok', state.adminToken);
-            \$('user-role-display').innerText = 'Admin Panel';
-            \$('admin-nav').classList.remove('hidden');
-            \$('loginOverlay').classList.add('hidden');
-            \$('mainApp').classList.remove('hidden');
-            switchTab('admin-users');
+            const token = \$('a-token').value;
+            if (!token) return;
+            try {
+                // Validate admin token by calling the API
+                const res = await fetch('/api/admin/services', {
+                    headers: { 'x-admin-token': token }
+                });
+                if (!res.ok) {
+                    throw new Error('Invalid admin token');
+                }
+                state.adminToken = token;
+                sessionStorage.setItem('atok', token);
+                \$('user-role-display').innerText = 'Admin Panel';
+                \$('admin-nav').classList.remove('hidden');
+                \$('loginOverlay').classList.add('hidden');
+                \$('mainApp').classList.remove('hidden');
+                switchTab('admin-users');
+            } catch (e) {
+                \$('auth-msg').className = 'mt-6 text-center text-sm text-red-400';
+                \$('auth-msg').innerText = '❌ ' + (e.message || 'Invalid admin token');
+            }
         };
 
         function logout() {
